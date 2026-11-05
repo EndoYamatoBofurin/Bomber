@@ -1,3 +1,6 @@
+package src;
+
+import javax.management.StringValueExp;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -9,6 +12,13 @@ public class BomberGUI extends JFrame {
     private boolean gameOver;
     private boolean boom;
     private JLabel statusLabel;
+    private ImageIcon flag_icon = new ImageIcon(
+            "C:\\Users\\Portaresku_AI\\Desktop\\Mine\\Projects\\Bomber\\Java\\img\\flag.png");
+    private ImageIcon boom_icon = new ImageIcon(
+            "C:\\Users\\Portaresku_AI\\Desktop\\Mine\\Projects\\Bomber\\Java\\img\\boom.png");
+    private Color[] colors = new Color[] { Color.LIGHT_GRAY, Color.BLUE, Color.GREEN, Color.RED, Color.ORANGE,
+            Color.PINK,
+            new Color(139, 69, 19), new Color(255, 215, 0), new Color(128, 0, 128) };
     private static final int SIZE = 9;
 
     private final MouseAdapter cellListener = new MouseAdapter() {
@@ -38,10 +48,24 @@ public class BomberGUI extends JFrame {
 
         for (int i = 0; i < SIZE; i++) {
             for (int j = 0; j < SIZE; j++) {
-                buttons[i][j] = new JButton("");
+                buttons[i][j] = new JButton("") {
+
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        boolean isEnabled = isEnabled();
+                        if (!isEnabled) {
+                            setEnabled(true); // Обманываем Swing на время отрисовки
+                            super.paintComponent(g);
+                            setEnabled(false); // Возвращаем заблокированное состояние
+                            return;
+                        }
+                        super.paintComponent(g);
+                    }
+                };
                 buttons[i][j].setFont(new Font("Arial", Font.BOLD, 60));
                 buttons[i][j].setFocusPainted(false);
                 buttons[i][j].setBackground(Color.WHITE);
+                buttons[i][j].setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
                 buttons[i][j].addMouseListener(cellListener);
                 gridPanel.add(buttons[i][j]);
             }
@@ -55,6 +79,7 @@ public class BomberGUI extends JFrame {
         add(resetButton, BorderLayout.SOUTH);
 
         setVisible(true);
+
     }
 
     public void handleCellClick(MouseEvent e) {
@@ -80,20 +105,20 @@ public class BomberGUI extends JFrame {
         }
 
         if (row != -1 && col != -1 && board.make_move(row, col, rl)) {
-            if ((board.get_cell(row, col).get_value() == -1) && (rl=='O')){
+            if ((board.get_cell(row, col).get_value() == -1) && (rl == 'O')) {
                 gameOver = true;
                 boom = true;
             }
-            if ((board.get_cell(row, col).get_value() == 0) && (rl=='O')){
-                open_nulls(row, col,true);
+            if ((board.get_cell(row, col).get_value() == 0) && (rl == 'O')) {
+                open_nulls(row, col, true);
             }
             if (board.is_full()) {
                 if (board.is_winner()) {
                     statusLabel.setText("Это победа");
                     gameOver = true;
                     disable_all();
-                }else{
-                statusLabel.setText("Лишний флаг");
+                } else {
+                    statusLabel.setText("Лишний флаг");
                 }
             }
             if (boom) {
@@ -107,25 +132,37 @@ public class BomberGUI extends JFrame {
             for (int i = 0; i < SIZE; i++) {
                 for (int j = 0; j < SIZE; j++) {
                     if (board.get_cell(i, j).get_is_flag()) {
-                        buttons[i][j].setText("F");
+                        Image scaledImg = flag_icon.getImage().getScaledInstance(buttons[0][0].getWidth() - 16,
+                                buttons[0][0].getHeight() - 16, Image.SCALE_SMOOTH);
+                        ImageIcon flag_icon_final = new ImageIcon(scaledImg);
+                        buttons[i][j].setIcon(flag_icon_final);
                         continue;
                     }
                     if (board.get_cell(i, j).get_check()) {
                         buttons[i][j].setEnabled(false);
+                        buttons[i][j].setBackground(Color.LIGHT_GRAY);
+                        buttons[i][j].setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
                         if (board.get_cell(i, j).get_value() == -1) {
-                            buttons[i][j].setText("B");
+                            Image scaledImg = boom_icon.getImage().getScaledInstance(buttons[0][0].getWidth() - 16,
+                                    buttons[0][0].getHeight() - 16, Image.SCALE_SMOOTH);
+                            ImageIcon boom_icon_final = new ImageIcon(scaledImg);
+                            buttons[i][j].setIcon(boom_icon_final);
                             continue;
                         }
                         if (board.get_cell(i, j).get_value() > 0) {
+                            buttons[i][j].setIcon(null);
+                            buttons[i][j].setForeground(colors[board.get_cell(i, j).get_value()]);
                             buttons[i][j].setText(String.valueOf(board.get_cell(i, j).get_value()));
                             continue;
                         }
                         if (board.get_cell(i, j).get_value() == 0) {
-                            buttons[i][j].setText("0");
+                            buttons[i][j].setIcon(null);
+                            buttons[i][j].setText("");
                             continue;
                         }
                     }
                     buttons[i][j].setText("");
+                    buttons[i][j].setIcon(null);
                 }
             }
         }
@@ -135,16 +172,16 @@ public class BomberGUI extends JFrame {
         if (row_n < 0 || row_n >= SIZE || col_n < 0 || col_n >= SIZE) {
             return;
         }
-        if (board.get_cell(row_n, col_n).get_check() && !start){
+        if (board.get_cell(row_n, col_n).get_check() && !start) {
             return;
         }
-        if ((board.get_cell(row_n, col_n).get_value() > -1) && !(board.get_cell(row_n,col_n).get_is_flag())){
+        if ((board.get_cell(row_n, col_n).get_value() > -1) && !(board.get_cell(row_n, col_n).get_is_flag())) {
             board.get_cell(row_n, col_n).open();
             if (board.get_cell(row_n, col_n).get_value() == 0) {
                 for (int i = -1; i <= 1; i++) {
                     for (int j = -1; j <= 1; j++) {
                         if (!((i == 0) && (j == 0))) {
-                            open_nulls((row_n + i), (col_n + j),false);
+                            open_nulls((row_n + i), (col_n + j), false);
                         }
                     }
                 }
@@ -169,6 +206,7 @@ public class BomberGUI extends JFrame {
         for (int i = 0; i < SIZE; i++) {
             for (int j = 0; j < SIZE; j++) {
                 buttons[i][j].setText("");
+                buttons[i][j].setIcon(null);
                 buttons[i][j].setEnabled(true);
                 buttons[i][j].setBackground(Color.WHITE);
             }

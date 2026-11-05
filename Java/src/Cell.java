@@ -1,3 +1,4 @@
+package src;
 public class Cell{
     private int value;
     private boolean is_flag;
